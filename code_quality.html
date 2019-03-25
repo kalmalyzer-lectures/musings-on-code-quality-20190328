@@ -90,69 +90,44 @@ High quality code is code, that...
 
 ---
 
+# Has this ever happened to you?
+
+"I thought it would take 3 days to do this, but ... something came up."
+
+"We have a milestone on Friday ... and everything stopped working this morning."
+
+What's that? Surprises during development?
+
+---
+
+# Why high quality code is important
+
+Surprises mess with the planning.
+
+Surprises make you work weekends, or miss milestones.
+
+Surprises are bad.
+
+High quality code => fewer surprises.
+
+---
+
 class: center, middle
 
-# Can you smell the low quality code in these examples?
+# Code quality changes over time
+
 
 ---
 
-# Example 1
-
--Why do we have ridiculously wide doorways in our game?
-
-_-Well, you see..._
-
-_Sometimes, when two NPCs meet in a doorway, they get stuck._
-
-_Both John and Sarah have tried fixing it, but that just resulted in other bugs, so we made all doorways a lot wider instead._
-
----
-
-# Example 2
-
--Why does it take so long to load character portraits in our game?
-
-_-Well, you see..._
-
-_All portrait images are packed into an atlas. The sprite renderer requires it._
-
-_Unfortunately, the entire atlas will be loaded in once for each character portrait. That's how the texture loader works._
-
----
-
-# Example 3
-
--Why does Tom always ask two other people to double-check any changes he makes to the winner logic?
-
-_-Well, you see..._
-
-_There are so many different paths through the winner logic, and it takes so much time to test every path, that we do manual inspection of the code instead._
-
-_Sometimes a bug slips through, and players get corrupted player progression._
-
-_When that happens, we fix their progression by modifying the database contents directly._
-
----
-
-Code quality...
-
-... changes over time.
-
-... takes time and effort to uphold.
-
-... is difficult to measure directly.
-
----
-
-### What happens if we pay attention to code quality?
+# What happens if we pay attention to code quality?
 
 Business as usual.
 
 ---
 
-### What happens if we _do not_ pay attention to code quality?
+# What happens if we _do not_ pay attention to code quality?
 
-Development goes slower.
+Development goes slower and slower.
 
 We introduce more bugs as we work on the code.
 
@@ -162,15 +137,28 @@ When things have gone too far: "We should rewrite the entire program from scratc
 
 ---
 
-### This is sometimes referred to as "technical debt".
+# This is referred to as "technical debt"
 
 We did not pay off our debts; now the interest rate is killing us.
 
 ---
 
-# Strategies to uphold high code quality
+class: center, middle
+
+# Strategies for upholding high code quality
 
 ---
+
+# Optimize your code for "finding errors early"
+
+Design code so that...
+1. people use/modify it correctly on their first attempt
+2. or, mistakes result in compile time errors
+3. or, mistakes result in runtime errors early
+4. or, mistakes always result in runtime errors
+
+---
+
 # Name things precisely
 
 When you name a variable / function / class,
@@ -219,6 +207,14 @@ void repelEnemiesFromPlayer(const Player& p, const vector<Enemy*>& enemies);
 
 ---
 
+# Write self-commenting code
+
+What's better than well-commented code?
+
+Code that does not need comments.
+
+---
+
 # Use temp variables instead of comments
 
 ```c++
@@ -226,7 +222,7 @@ bool CanAttack(const Unit& source, const Unit& target)
 {
 	return !source.IsStunned() && !source.IsBlinded()
 		&& Distance(source.Pos(), target.Pos()) <= source.AttackRange()
-		&& (!target.IsFlying() || source.CanAttackFlying()) && source.Energy > 0;
+		&& source.Energy > 0;
 }
 ```
 vs
@@ -236,13 +232,10 @@ bool CanAttack(const Unit& source, const Unit& target)
 	bool canPerformActions = (!source.IsStunned() && !source.IsBlinded());
 	bool targetWithinRange = (Distance(source.Pos(), target.Pos()))
 								<= source.AttackRange());
-	bool satisfiesGroundToFlyingAttackRules
-		= (!target.IsFlying() || source.CanAttackFlying());
 	bool hasEnergyLeft = (source.Energy > 0);
 
 	return canPerformActions
 		&& targetWithinRange
-		&& satisfiesGroundToFlyingAttackRules
 		&& hasEnergyLeft;
 }
 ```
@@ -256,7 +249,7 @@ bool CanAttack(const Unit& source, const Unit& target)
 {
 	return !source.IsStunned() && !source.IsBlinded()
 		&& Distance(source.Pos(), target.Pos()) <= source.AttackRange()
-		&& (!target.IsFlying() || source.CanAttackFlying()) && source.Energy > 0;
+		&& source.Energy > 0;
 }
 ```
 vs
@@ -265,40 +258,155 @@ bool CanAttack(const Unit& source, const Unit& target)
 {
 	return canPerformActions(source)
 		&& targetWithinRange(source, target)
-		&& satisfiesGroundToFlyingAttackRules(source, target)
 		&& hasEnergyLeft(source);
 }
 ```
 
 ---
 
-TEMPTEMPTEMP
+# Minimize scope for variables
+
+```c++
+void ProcessPlayers(Game* game)
+{
+    Player* player0 = game->getPlayer0();
+    player0->ProcessPlayer();
+
+    Player* player1 = game->getPlayer1();
+    player0->ProcessPlayer();               // ooops! runtime error!
+}
+```
+
+vs
+
+```c++
+void ProcessPlayers(Game* game)
+{
+  {
+    Player* player0 = game->getPlayer0();
+    player0->ProcessPlayer();
+  }
+
+  {
+    Player* player1 = game->getPlayer1();
+    player0->ProcessPlayer();             // oops! compile time error!
+  }
+}
+```
 
 ---
 
+# Use the type system to your advantage
 
-# Good code is:
+```c++
+  int textureId;
+  
+  int loadTexture(const char* path);
+  void destroyTexture(int textureId);
 
-easy to use/modify correctly
-difficult to use/modify incorrectly
+  ...
+  for (int i = 0; i < numTextures; i++)
+    destroyTexture(i);                  // oops! runtime error!
+```
+
+vs
+
+```c++
+  struct TextureId
+  {
+    int id;
+  }
+  
+  TextureId loadTexture(const char* path);
+  void destroyTexture(TextureId textureId);
+
+  ...
+  for (int i = 0; i < numTextures; i++)
+    destroyTexture(i);                  // oops! compile time error!
+```
 
 ---
 
-# Use scoping to restrict
+# Use asserts
+
+```c++
+
+void ProcessPlayer(Player* p)
+{
+  Assert_IsNotNull(p);        // Self-documenting + runtime check
+  ...
+}
+```
 
 ---
 
-Minimal Total Complexity
+# Minimize the total complexity of the code
+
+There is no good scientific measure for "total complexity".
+
+I like to explain the measure like this:
+
+_"Number of minutes it takes to thoroughly explain the code to a colleague"_
+
+How to measure: explain it to a colleague!
+
+Or "rubber duck" it...
+
+.center[.img-max-width-40[![Rubber ducking](rubber_ducking.jpg)]]
 
 ---
 
-The Measurability Problem
+# Self-review your code
+
+Play devil's advocate:
+
+* ”What if this pointer is 0?”
+* ”What if this loop will run just 0 or 1 times?”
+* ”What if that memory allocation fails?”
+* ”What if there is no player object yet?”
+
+Try to figure out ways in which your code can fail, and then re-design it so that it is foolproof
 
 ---
 
+# Write unit tests for your code
 
+Write code that executes those self-review cases on your code.
 
+This is valuable because:
 
+- You can easily re-run your tests in the future.
+- Everyone else on your team can re-run your tests too!
+
+---
+
+# Write unit tests for your data
+
+Write code that does sanity checks on your data.
+
+Content creators face the same problems as programmers.
+
+You are experts at automation. Help your team by helping the content creators.
+
+---
+
+# Larger projects require more care
+
+TODO: final sentence or two
+
+---
+
+class: center, middle
+
+# Questions?
+
+---
+
+class: center, middle
+
+# Thank you.
+
+mikael@kalms.org
 
     </textarea>
     <script src="https://remarkjs.com/downloads/remark-latest.min.js">
