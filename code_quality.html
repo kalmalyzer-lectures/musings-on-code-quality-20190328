@@ -1,0 +1,310 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8">
+    <style>
+      @import url(https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz);
+      @import url(https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic);
+      @import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
+
+      body { font-family: 'Droid Serif'; }
+      h1, h2, h3 {
+        font-family: 'Yanone Kaffeesatz';
+        font-weight: normal;
+      }
+      .remark-code, .remark-inline-code { font-family: 'Ubuntu Mono'; }
+
+      .img-max-width-40 img {
+        max-width: 40%;
+      }
+
+      .img-max-width-50 img {
+        max-width: 50%;
+      }
+
+      .img-max-width-75 img {
+        max-width: 75%;
+      }
+
+      .img-max-width-100 img {
+        max-width: 100%;
+      }
+
+    </style>
+  </head>
+  <body>
+    <textarea id="source">
+
+class: center, middle
+
+# Musings on Code Quality
+
+Mikael Kalms
+
+CTO, Fall Damage
+
+mikael@kalms.org
+
+---
+
+# Elegant code can be high quality code
+
+The devil is in the details!
+
+.center[.img-max-width-40[![a very elegant robot](Atlas_frontview_2013.jpg)]]
+
+???
+
+It is very pretty.
+
+You can tell that it is complex.
+
+However, what's happening beneath the surface?
+
+---
+
+# Robust code is often high quality code
+
+.center[.img-max-width-75[![a very robust jeep](willys-jeep-mb-2745709_960_720.png)]]
+
+???
+
+It works.
+
+It is not very complicated.
+
+You know that it is not going to let you down at a critical moment.
+
+---
+
+# What is high quality code?
+
+High quality code is code, that...
+
+* Does what it is supposed to do, and nothing else
+* Is easy to understand and modify
+* Is easy to test
+* Does not waste resources unnecessarily
+
+---
+
+class: center, middle
+
+# Can you smell the low quality code in these examples?
+
+---
+
+# Example 1
+
+-Why do we have ridiculously wide doorways in our game?
+
+_-Well, you see..._
+
+_Sometimes, when two NPCs meet in a doorway, they get stuck._
+
+_Both John and Sarah have tried fixing it, but that just resulted in other bugs, so we made all doorways a lot wider instead._
+
+---
+
+# Example 2
+
+-Why does it take so long to load character portraits in our game?
+
+_-Well, you see..._
+
+_All portrait images are packed into an atlas. The sprite renderer requires it._
+
+_Unfortunately, the entire atlas will be loaded in once for each character portrait. That's how the texture loader works._
+
+---
+
+# Example 3
+
+-Why does Tom always ask two other people to double-check any changes he makes to the winner logic?
+
+_-Well, you see..._
+
+_There are so many different paths through the winner logic, and it takes so much time to test every path, that we do manual inspection of the code instead._
+
+_Sometimes a bug slips through, and players get corrupted player progression._
+
+_When that happens, we fix their progression by modifying the database contents directly._
+
+---
+
+Code quality...
+
+... changes over time.
+
+... takes time and effort to uphold.
+
+... is difficult to measure directly.
+
+---
+
+### What happens if we pay attention to code quality?
+
+Business as usual.
+
+---
+
+### What happens if we _do not_ pay attention to code quality?
+
+Development goes slower.
+
+We introduce more bugs as we work on the code.
+
+It becomes more and more difficult for us to test our own work.
+
+When things have gone too far: "We should rewrite the entire program from scratch".
+
+---
+
+### This is sometimes referred to as "technical debt".
+
+We did not pay off our debts; now the interest rate is killing us.
+
+---
+
+# Strategies to uphold high code quality
+
+---
+# Name things precisely
+
+When you name a variable / function / class,
+find a name that makes the reader understand:
+* what is its purpose?
+* what is _NOT_ its purpose?
+
+These two are equally important.
+
+---
+# Name things precisely
+
+```c++
+struct PlayerParams
+{
+	int score0, score1;
+};
+```
+
+vs
+
+```c++
+struct PlayerParams
+{
+	int previousMatchScore, currentMatchScore;
+};
+```
+
+---
+
+# Name things precisely
+
+```c++
+vector<Enemy*> getEnemies(const Player& p, float distance);
+
+void handleEnemies(const Player& p, const vector<Enemy*>& enemies);
+```
+
+vs
+
+```c++
+vector<Enemy*> getEnemiesWithinRange(const Player& p, float maxDistance);
+
+void repelEnemiesFromPlayer(const Player& p, const vector<Enemy*>& enemies);
+```
+
+---
+
+# Use temp variables instead of comments
+
+```c++
+bool CanAttack(const Unit& source, const Unit& target)
+{
+	return !source.IsStunned() && !source.IsBlinded()
+		&& Distance(source.Pos(), target.Pos()) <= source.AttackRange()
+		&& (!target.IsFlying() || source.CanAttackFlying()) && source.Energy > 0;
+}
+```
+vs
+```c++
+bool CanAttack(const Unit& source, const Unit& target)
+{
+	bool canPerformActions = (!source.IsStunned() && !source.IsBlinded());
+	bool targetWithinRange = (Distance(source.Pos(), target.Pos()))
+								<= source.AttackRange());
+	bool satisfiesGroundToFlyingAttackRules
+		= (!target.IsFlying() || source.CanAttackFlying());
+	bool hasEnergyLeft = (source.Energy > 0);
+
+	return canPerformActions
+		&& targetWithinRange
+		&& satisfiesGroundToFlyingAttackRules
+		&& hasEnergyLeft;
+}
+```
+
+---
+
+# Use helper methods instead of comments
+
+```c++
+bool CanAttack(const Unit& source, const Unit& target)
+{
+	return !source.IsStunned() && !source.IsBlinded()
+		&& Distance(source.Pos(), target.Pos()) <= source.AttackRange()
+		&& (!target.IsFlying() || source.CanAttackFlying()) && source.Energy > 0;
+}
+```
+vs
+```c++
+bool CanAttack(const Unit& source, const Unit& target)
+{
+	return canPerformActions(source)
+		&& targetWithinRange(source, target)
+		&& satisfiesGroundToFlyingAttackRules(source, target)
+		&& hasEnergyLeft(source);
+}
+```
+
+---
+
+TEMPTEMPTEMP
+
+---
+
+
+# Good code is:
+
+easy to use/modify correctly
+difficult to use/modify incorrectly
+
+---
+
+# Use scoping to restrict
+
+---
+
+Minimal Total Complexity
+
+---
+
+The Measurability Problem
+
+---
+
+
+
+
+
+    </textarea>
+    <script src="https://remarkjs.com/downloads/remark-latest.min.js">
+    </script>
+    <script>
+      var slideshow = remark.create();
+    </script>
+  </body>
+</html>
