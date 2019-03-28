@@ -143,6 +143,12 @@ We did not pay off our debts; now the interest rate is killing us.
 
 ---
 
+# Larger projects require more care
+
+Project growth + accumulated technical debt => slower development.
+
+---
+
 class: center, middle
 
 # Strategies for upholding high code quality
@@ -356,6 +362,22 @@ Or "rubber duck" it...
 
 ---
 
+# Simplify your code via functional programming
+
+```c++
+void simulateEntity(Entity* entity);
+```
+vs
+```c++
+Entity simulateEntity(const Entity& entity);
+```
+
+Slower? Sometimes.
+
+Simpler code? Usually!
+
+---
+
 # Self-review your code
 
 Play devil's advocate:
@@ -387,12 +409,6 @@ Write code that does sanity checks on your data.
 Content creators face the same problems as programmers.
 
 You are experts at automation. Help your team by helping the content creators.
-
----
-
-# Larger projects require more care
-
-TODO: final sentence or two
 
 ---
 
