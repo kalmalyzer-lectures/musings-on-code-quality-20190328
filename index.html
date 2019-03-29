@@ -155,16 +155,6 @@ class: center, middle
 
 ---
 
-# Optimize your code for "finding errors early"
-
-Design code so that...
-1. people use/modify it correctly on their first attempt
-2. or, mistakes result in compile time errors
-3. or, mistakes result in runtime errors early
-4. or, mistakes always result in runtime errors
-
----
-
 # Name things precisely
 
 When you name a variable / function / class,
@@ -236,12 +226,12 @@ vs
 bool CanAttack(const Unit& source, const Unit& target)
 {
 	bool canPerformActions = (!source.IsStunned() && !source.IsBlinded());
-	bool targetWithinRange = (Distance(source.Pos(), target.Pos()))
+	bool isTargetWithinRange = (Distance(source.Pos(), target.Pos()))
 								<= source.AttackRange());
 	bool hasEnergyLeft = (source.Energy > 0);
 
 	return canPerformActions
-		&& targetWithinRange
+		&& isTargetWithinRange
 		&& hasEnergyLeft;
 }
 ```
@@ -263,10 +253,20 @@ vs
 bool CanAttack(const Unit& source, const Unit& target)
 {
 	return canPerformActions(source)
-		&& targetWithinRange(source, target)
+		&& isTargetWithinRange(source, target)
 		&& hasEnergyLeft(source);
 }
 ```
+
+---
+
+# Optimize your code for "finding errors early"
+
+Design code so that...
+1. people use/modify it correctly on their first attempt
+2. or, mistakes result in compile time errors
+3. or, mistakes result in runtime errors early
+4. or, mistakes always result in runtime errors
 
 ---
 
@@ -374,7 +374,61 @@ Entity simulateEntity(const Entity& entity);
 
 Slower? Sometimes.
 
-Simpler code? Usually!
+Simpler code? Usually! The above example doesn't seem simpler though...
+
+---
+
+# Simplify your code via functional programming
+
+What if we want to split our logic into smaller steps?
+
+
+```c++
+void simulateEntityHealth(const Entity& entity);
+void simulateEntityPosition(const Entity& entity);
+void simulateEntityVelocity(const Entity& entity);
+```
+vs
+```c++
+EntityHealth simulateEntityHealth(const Entity& entity);
+EntityPosition simulateEntityPosition(const Entity& entity);
+EntityVelocity simulateEntityVelocity(const Entity& entity);
+
+Entity createEntity(const EntityHealth& health,
+	const EntityPosition& position,
+	const EntityVelocity& velocity);
+```
+
+The functional form guarantees there are no ordering constraints.
+
+
+---
+
+# Simplify your code via functional programming
+
+Do we really need to work on full Entity objects?
+
+```c++
+EntityHealth simulateEntityHealth(const Entity& entity);
+EntityPosition simulateEntityPosition(const Entity& entity);
+EntityVelocity simulateEntityVelocity(const Entity& entity);
+
+Entity createEntity(const EntityHealth& health,
+	const EntityPosition& position,
+	const EntityVelocity& velocity);
+```
+vs
+```c++
+EntityHealth simulateEntityHealth(const EntityHealth& health,
+	const EntityPosition& position);
+EntityPosition simulateEntityPosition(const EntityPosition& position,
+	const EntityVelocity& velocity);
+EntityVelocity simulateEntityVelocity(const EntityVelocity& velocity);
+```
+
+The latter form minimizes the set of input data for each step...
+
+... and is perfect for batch processing in Unity's new Job/ECS system!
 
 ---
 
